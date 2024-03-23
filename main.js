@@ -68,7 +68,7 @@ async  function run(isHeadless) {
 async function runScript() {
     while (true) {
         run(false);
-        await new Promise(resolve => setTimeout(resolve, 60000 * 3));
+        await new Promise(resolve => setTimeout(resolve, 60000 * 4));
     }
 }
 
