@@ -45,7 +45,7 @@ async  function run(isHeadless) {
         console.log("Loaded!")
         for (const element of elements) {
             console.log("Checking element: ", element)
-            await driver.wait(until.elementLocated(By.id(element)), 2000);
+            await driver.wait(until.elementLocated(By.id(element)), 4000);
             await driver.executeScript(fs.readFileSync(citaJs, 'utf8'));
             console.log("Script executed")
         }
