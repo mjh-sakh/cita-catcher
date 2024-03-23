@@ -40,7 +40,7 @@ async  function run(isHeadless) {
         .setChromeOptions(options)
         .build();
     try {
-        console.log("Loading...")
+        console.log(new Date().toISOString(), "| Loading...")
         await driver.get(citaUrl);
         console.log("Loaded!")
         for (const element of elements) {
