@@ -100,9 +100,13 @@ async  function run() {
 }
 
 async function runScript() {
+    let counter = 1;
     while (true) {
         run(false);
-        await new Promise(resolve => setTimeout(resolve, 60000));
+        await new Promise(resolve => setTimeout(resolve, 90000 + counter++ * 10000));
+        if(counter > 10) {
+            counter = 1;
+        }
     }
 }
 
