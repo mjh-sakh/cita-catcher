@@ -14,14 +14,15 @@ const CERTIFICADO_DE_REGISTRO_DE_CIUDADANO_DE_LAUE = "4038"
 const CERTIFICADOS_DE_RESIDENCIA_DE_NO_RESIDENCIA_Y_DE_CONCORDANCIA_ = "4049"
 const CERTIFICADOS_Y_ASIGNACION_NIE = "4096"
 const TOMA_DE_HUELLA = "4010"
+const POLICIA_EXPEDICION_DE_TARJETAS_CUYA_AUTORIZACION_RESUELVE_LA_DIRECCION_GENERAL_DE_MIGRACIONES = "4047"
 // ------------------------------ COUNTRIES ------------------------------------
 const RUSSIA = "149"
 const BELARUS = "144"
 const UCRANIA = "152"
 const KAZAJSTAN = "146"
 // --------------------------- CONFIGURATIONS ----------------------------------
-const CITY = VALENCIA
-const SERVICE = TOMA_DE_HUELLA
+const CITY = BARCELONA
+const SERVICE = POLICIA_EXPEDICION_DE_TARJETAS_CUYA_AUTORIZACION_RESUELVE_LA_DIRECCION_GENERAL_DE_MIGRACIONES
 const COUNTRY = RUSSIA
 const NAME = "<Your name>" // e.g. Migrant Migrantov
 const NIE = "<Z1234567H>" // e.g. Z1234567H
@@ -46,7 +47,7 @@ function clickIfPresent(id) {
 }
 
 function isLocation(location) {
-  return document.location.pathname === location
+  return document.location.pathname.startsWith(location)
 }
 // ----------------------------- MAIN LOGIC ------------------------------------
 // MAIN PAGE
@@ -56,24 +57,25 @@ if (isLocation("/icpplus/index.html") || isLocation("/icpplus/index")) {
 }
 
 // SERVICE PAGE
-if (isLocation("/icpplus/citar")) {
+if (isLocation("/icpplustieb/citar")) {
   setIfPresent("tramiteGrupo[0]", SERVICE)
   clickIfPresent("btnAceptar")
 }
 
 // INFO PAGE
-if (isLocation("/icpplus/acInfo")) {
+if (isLocation("/icpplustieb/acInfo")) {
   clickIfPresent("btnEntrar")
 }
 
 // PERSONAL INFO
-setIfPresent("txtPaisNac", COUNTRY)
-setIfPresent("txtIdCitado", NIE)
-if (setIfPresent("txtDesCitado", NAME)) {
+if (isLocation("/icpplustieb/acEntrada")) {
+  setIfPresent("txtPaisNac", COUNTRY)
+  setIfPresent("txtIdCitado", NIE)
+  setIfPresent("txtDesCitado", NAME)
   clickIfPresent("btnEnviar")
 }
 
-if (isLocation("/icpplus/acValidarEntrada")) {
+if (isLocation("/icpplustieb/acValidarEntrada")) {
   clickIfPresent("btnEnviar")
 }
 

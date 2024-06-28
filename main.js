@@ -55,6 +55,7 @@ async  function run() {
     options.addArguments(`--user-data-dir=/tmp/user-agent-string-${agentIndex}`);
     options.addArguments("--disable-extensions");
     options.addArguments(`--user-agent=${getUserAgent()}`);
+    options.addArguments('--blink-settings=imagesEnabled=false');
 
     agentIndex++;
     const driver = new Builder()
