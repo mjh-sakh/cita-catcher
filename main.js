@@ -4,13 +4,12 @@ const { exec } = require('child_process');
 // Specify the path to the ChromeDriver executable
 const chrome = require('selenium-webdriver/chrome');
 const {TimeoutError} = require("selenium-webdriver/lib/error");
-const chromedriverPath = '../chromedriver/chromedriver'; // Update with your ChromeDriver path
 const citaUrl = "https://icp.administracionelectronica.gob.es/icpplus/index.html";
 const citaJs = './get-cita.js';
 
 // Function to execute the script periodically
 
-const elements = ["form", "tramiteGrupo[0]", "btnEntrar", "txtIdCitado", "btnEnviar"]
+const elements = ["form", "tramiteGrupo[0]", "btnEntrar", "txtIdCitado", "btnEnviar"];
 
 const user_agents = [
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.110 Safari/537.36",
@@ -29,6 +28,14 @@ function getUserAgent() {
         agentIndex = 0;
     }
     return user_agents.at(agentIndex++);
+}
+
+async function notify() {
+    await fetch('http://127.0.0.1:5000/notify');
+}
+
+async function heartbeat(){
+    await fetch('http://127.0.0.1:5000/heartbeat');
 }
 
 function playSound() {
@@ -56,6 +63,7 @@ async  function run() {
     options.addArguments("--disable-extensions");
     options.addArguments(`--user-agent=${getUserAgent()}`);
     options.addArguments('--blink-settings=imagesEnabled=false');
+    options.addArguments('--headless');
 
     agentIndex++;
     const driver = new Builder()
@@ -68,7 +76,8 @@ async  function run() {
 
         try {
             await driver.wait(until.elementLocated(By.xpath('//*[contains(text(), "Too Many Requests")]')), 2000);
-            await new Promise(resolve => setTimeout(resolve, 6000 * 5));
+            console.log("Too many requests, waiting...")
+            await new Promise(resolve => setTimeout(resolve, 10 * 60 * 1000));
             return
         } catch (error) {
             console.log("Loaded!")
@@ -83,11 +92,13 @@ async  function run() {
 
         console.log("We made it through!")
 
-        playSound()
+        const notifyPromise = notify();
+        playSound();
         const screenshot = await driver.takeScreenshot();
         fs.writeFileSync(`/tmp/screenshot${new Date().toISOString()}.png`, screenshot, 'base64');
 
-        await new Promise(resolve => setTimeout(resolve, 6000 * 20));
+        await notifyPromise;
+        await new Promise(resolve => setTimeout(resolve, 10 * 60 * 1000));
     } catch (e) {
         if(e instanceof TimeoutError) {
             console.log("Nope, no luck...")
@@ -101,13 +112,17 @@ async  function run() {
 }
 
 async function runScript() {
-    let counter = 1;
+    await heartbeat();
+    let counter = 0;
     while (true) {
-        run(false);
-        await new Promise(resolve => setTimeout(resolve, 90000 + counter++ * 10000));
-        if(counter > 10) {
-            counter = 1;
-        }
+        counter++;
+        console.log("Staring attempt: ", counter)
+        if(counter % 20 === 0) {await heartbeat()}
+        await run(false);
+        const min_wait = 2 * 60 * 1000;
+        const max_wait = 4 * 60 * 1000;
+        const delay = Math.floor(Math.random() * (max_wait - min_wait) + min_wait);
+        await new Promise(resolve => setTimeout(resolve, delay));
     }
 }
 
