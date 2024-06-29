@@ -6,6 +6,7 @@ const chrome = require('selenium-webdriver/chrome');
 const {TimeoutError} = require("selenium-webdriver/lib/error");
 const citaUrl = "https://icp.administracionelectronica.gob.es/icpplus/index.html";
 const citaJs = './get-cita.js';
+const { notifyTelegram, alert, sendFile } = require('./bot');
 
 // Function to execute the script periodically
 
@@ -30,12 +31,8 @@ function getUserAgent() {
     return user_agents.at(agentIndex++);
 }
 
-async function notify() {
-    await fetch('http://127.0.0.1:5000/notify');
-}
-
 async function heartbeat(){
-    await fetch('http://127.0.0.1:5000/heartbeat');
+    await notifyTelegram("I'm still alive!");
 }
 
 function playSound() {
@@ -63,13 +60,21 @@ async  function run() {
     options.addArguments("--disable-extensions");
     options.addArguments(`--user-agent=${getUserAgent()}`);
     options.addArguments('--blink-settings=imagesEnabled=false');
-    options.addArguments('--headless');
+    // options.addArguments('--headless');
 
     agentIndex++;
     const driver = new Builder()
         .forBrowser('chrome')
         .setChromeOptions(options)
         .build();
+
+    async function take_snapshot() {
+        const screenshot = await driver.takeScreenshot();
+        const file_path = `./tmp/screenshot${new Date().toISOString()}.png`
+        fs.writeFileSync(file_path, screenshot, 'base64');
+        return file_path
+    }
+
     try {
         console.log(new Date().toISOString(), "| Loading...")
         await driver.get(citaUrl);
@@ -92,13 +97,13 @@ async  function run() {
 
         console.log("We made it through!")
 
-        const notifyPromise = notify();
+        const notifyPromise = alert();
         playSound();
-        const screenshot = await driver.takeScreenshot();
-        fs.writeFileSync(`/tmp/screenshot${new Date().toISOString()}.png`, screenshot, 'base64');
+        const snapshot_path = await take_snapshot();
+        await sendFile(snapshot_path);
 
         await notifyPromise;
-        await new Promise(resolve => setTimeout(resolve, 10 * 60 * 1000));
+        await new Promise(resolve => setTimeout(resolve, 30 * 60 * 1000));
     } catch (e) {
         if(e instanceof TimeoutError) {
             console.log("Nope, no luck...")
