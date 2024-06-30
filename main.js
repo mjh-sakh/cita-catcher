@@ -53,27 +53,29 @@ function playSound() {
     });
 }
 
-async  function run() {
-    console.log("Running... ")
-    const options = new chrome.Options();
-    options.addArguments(`--user-data-dir=/tmp/user-agent-string-${agentIndex}`);
-    options.addArguments("--disable-extensions");
-    options.addArguments(`--user-agent=${getUserAgent()}`);
-    options.addArguments('--blink-settings=imagesEnabled=false');
-    // options.addArguments('--headless');
-
-    agentIndex++;
-    const driver = new Builder()
-        .forBrowser('chrome')
-        .setChromeOptions(options)
-        .build();
-
+async  function run(notify_and_hold= false) {
     async function take_snapshot() {
         const screenshot = await driver.takeScreenshot();
         const file_path = `./tmp/screenshot${new Date().toISOString()}.png`
         fs.writeFileSync(file_path, screenshot, 'base64');
         return file_path
     }
+
+    console.log("Running... ")
+    const options = new chrome.Options();
+    options.addArguments(`--user-data-dir=/tmp/user-agent-string-${agentIndex}`);
+    options.addArguments("--disable-extensions");
+    options.addArguments(`--user-agent=${getUserAgent()}`);
+    if (!notify_and_hold) {
+        options.addArguments('--blink-settings=imagesEnabled=false');
+        options.addArguments('--headless');
+    }
+
+    agentIndex++;
+    const driver = new Builder()
+        .forBrowser('chrome')
+        .setChromeOptions(options)
+        .build();
 
     try {
         console.log(new Date().toISOString(), "| Loading...")
@@ -82,7 +84,7 @@ async  function run() {
         try {
             await driver.wait(until.elementLocated(By.xpath('//*[contains(text(), "Too Many Requests")]')), 2000);
             console.log("Too many requests, waiting...")
-            await new Promise(resolve => setTimeout(resolve, 10 * 60 * 1000));
+            await pause(10 * 60 * 1000);
             return
         } catch (error) {
             console.log("Loaded!")
@@ -94,21 +96,31 @@ async  function run() {
             await driver.executeScript(fs.readFileSync(citaJs, 'utf8'));
             console.log("Script executed")
         }
-
         console.log("We made it through!")
 
-        const notifyPromise = alert();
-        playSound();
-        const snapshot_path = await take_snapshot();
-        await sendFile(snapshot_path);
+        await take_snapshot()
+            .then(snapshot_path => sendFile(snapshot_path));
 
-        await notifyPromise;
-        await new Promise(resolve => setTimeout(resolve, 30 * 60 * 1000));
+        if (notify_and_hold) {
+            playSound();
+            await Promise.all([
+                alert(),
+                notifyTelegram(citaUrl),
+                pause(30 * 60 * 1000),
+            ]);
+        }
+        else {
+            await Promise.all([
+                notifyTelegram('We got success! Immediately repeating the process...'),
+                run(true),
+            ]);
+        }
     } catch (e) {
         if(e instanceof TimeoutError) {
-            console.log("Nope, no luck...")
+            console.log("Nope, no luck...");
+            await pause();
         } else {
-            console.log(e)
+            console.log(e);
         }
     } finally {
         // Quit the WebDriver session
@@ -116,18 +128,23 @@ async  function run() {
     }
 }
 
+async function pause(delay=null) {
+    if(delay === null) {
+        const min_wait = 2 * 60 * 1000;
+        const max_wait = 4 * 60 * 1000;
+        delay = Math.floor(Math.random() * (max_wait - min_wait) + min_wait);
+    }
+    await new Promise(resolve => setTimeout(resolve, delay));
+}
+
 async function runScript() {
     await heartbeat();
     let counter = 0;
     while (true) {
         counter++;
-        console.log("Staring attempt: ", counter)
+        console.log("Staring attempt: ", counter);
         if(counter % 20 === 0) {await heartbeat()}
-        await run(false);
-        const min_wait = 2 * 60 * 1000;
-        const max_wait = 4 * 60 * 1000;
-        const delay = Math.floor(Math.random() * (max_wait - min_wait) + min_wait);
-        await new Promise(resolve => setTimeout(resolve, delay));
+        await run();
     }
 }
 
